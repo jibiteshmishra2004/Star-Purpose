@@ -1,30 +1,18 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Bell, LogOut, User, LayoutDashboard } from 'lucide-react';
+import { Menu, X, Bell, LogOut, LayoutDashboard, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/context/AppContext';
 import AdminLoginModal from '@/components/auth/AdminLoginModal';
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [logoClicks, setLogoClicks] = useState(0);
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const { isLoggedIn, role, logout, notifications } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const unreadCount = notifications.filter(n => !n.read).length;
-
-  const handleLogoClick = () => {
-    const next = logoClicks + 1;
-    setLogoClicks(next);
-    if (next >= 5) {
-      setAdminModalOpen(true);
-      setLogoClicks(0);
-    }
-    setTimeout(() => setLogoClicks(0), 3000);
-    navigate('/');
-  };
 
   const dashboardPath = role === 'seller' ? '/seller' : role === 'admin' ? '/admin' : '/dashboard';
   const isDashboard = ['/dashboard', '/seller', '/admin'].some(p => location.pathname.startsWith(p));
@@ -33,12 +21,12 @@ export default function Navbar() {
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 glass">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <button onClick={handleLogoClick} className="flex items-center gap-3 select-none hover:opacity-80 transition-opacity" title="STAR PURPOSE - Return to home">
+          <Link to="/" className="flex items-center gap-3 select-none hover:opacity-80 transition-opacity" title="STAR PURPOSE - Return to home">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
               <img src="/logo-dark.svg" alt="STAR PURPOSE" className="w-6 h-6" />
             </div>
             <span className="font-bold text-lg bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hidden sm:inline">STAR PURPOSE</span>
-          </button>
+          </Link>
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-6">
@@ -52,6 +40,14 @@ export default function Navbar() {
                 <Link to="/signup">
                   <Button size="sm">Get Started</Button>
                 </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setAdminModalOpen(true)}
+                >
+                  <Shield className="w-4 h-4" /> Admin
+                </Button>
               </>
             ) : (
               <>
@@ -96,6 +92,16 @@ export default function Navbar() {
                     <Link to="/for-sellers" onClick={() => setMobileOpen(false)} className="py-2 text-sm">For Sellers</Link>
                     <Link to="/login" onClick={() => setMobileOpen(false)}><Button variant="ghost" className="w-full">Log In</Button></Link>
                     <Link to="/signup" onClick={() => setMobileOpen(false)}><Button className="w-full">Get Started</Button></Link>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        setAdminModalOpen(true);
+                      }}
+                    >
+                      <Shield className="w-4 h-4" /> Admin Access
+                    </Button>
                   </>
                 ) : (
                   <>

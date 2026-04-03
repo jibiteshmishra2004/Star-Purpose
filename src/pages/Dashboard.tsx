@@ -19,7 +19,7 @@ export default function Dashboard() {
   const {
     tenMinMode, toggleTenMinMode, tasks, activeTask, taskTimer,
     acceptTask, completeTask, balance, transactions, notifications,
-    markNotificationRead, showPaymentSuccess, setShowPaymentSuccess,
+    markNotificationRead, showPaymentSuccess, setShowPaymentSuccess, tasksLoading, tasksError,
   } = useApp();
   const [tab, setTab] = useState<'tasks' | 'wallet' | 'history' | 'profile' | 'notifications'>('tasks');
   const [timer, setTimer] = useState(taskTimer);
@@ -139,11 +139,13 @@ export default function Dashboard() {
           {tab === 'tasks' && (
             <div className="space-y-4">
               {availableTasks.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">No tasks available right now</div>
+                <div className="text-center py-12 text-muted-foreground">
+                  {tasksLoading ? 'Loading available tasks...' : 'No tasks available right now'}
+                </div>
               ) : (
                 availableTasks.map((task, i) => (
                   <motion.div key={task.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                    <Card className="hover:shadow-md transition-shadow">
+                    <Card className="hover:shadow-md hover:border-primary/30 transition-all">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
@@ -166,6 +168,7 @@ export default function Dashboard() {
                   </motion.div>
                 ))
               )}
+              {tasksError && <p className="text-center text-sm text-destructive">{tasksError}</p>}
             </div>
           )}
 

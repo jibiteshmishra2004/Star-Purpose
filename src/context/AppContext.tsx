@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { Task, Transaction, Notification, mockTasks, mockTransactions, mockNotifications } from '@/data/mockData';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
+import { Notification, Task, Transaction, mockNotifications, mockTasks, mockTransactions } from '@/data/mockData';
 import { toast } from 'sonner';
 
 interface AppState {
@@ -13,6 +14,8 @@ interface AppState {
   transactions: Transaction[];
   notifications: Notification[];
   sellerTasks: Task[];
+  tasksLoading: boolean;
+  tasksError: string | null;
 }
 
 interface AppContextType extends AppState {
@@ -20,15 +23,94 @@ interface AppContextType extends AppState {
   login: (role: 'user' | 'seller' | 'admin') => void;
   logout: () => void;
   toggleTenMinMode: () => void;
-  acceptTask: (taskId: string) => void;
-  completeTask: () => void;
-  postTask: (task: Omit<Task, 'id' | 'status' | 'createdAt' | 'postedBy'>) => void;
+  acceptTask: (taskId: string) => Promise<void>;
+  completeTask: () => Promise<void>;
+  postTask: (task: Omit<Task, 'id' | 'status' | 'createdAt' | 'postedBy'>) => Promise<void>;
   markNotificationRead: (id: string) => void;
   showPaymentSuccess: boolean;
   setShowPaymentSuccess: (v: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+/** In Vite dev, use same-origin URLs so the dev-server proxy can reach the API without CORS issues. */
+const API_BASE_URL = (() => {
+  const fromEnv = import.meta.env.VITE_API_URL;
+  if (fromEnv !== undefined && fromEnv !== '') {
+    return String(fromEnv).replace(/\/$/, '');
+  }
+  if (import.meta.env.DEV) {
+    return '';
+  }
+  return 'http://localhost:3000';
+})();
+
+function apiPath(path: string) {
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return API_BASE_URL ? `${API_BASE_URL}${p}` : p;
+}
+
+function connectionErrorMessage(): string {
+  return API_BASE_URL
+    ? `Cannot reach the API at ${API_BASE_URL}. Is the backend running?`
+    : 'Cannot reach the API (proxied to port 3000). Run `npm run server` in another terminal, then refresh.';
+}
+
+type ApiTask = {
+  id: number;
+  title: string;
+  price: number;
+  status: string;
+  assignedTo: string | null;
+};
+
+type ApiEnvelope<T> = {
+  success?: boolean;
+  data?: T;
+  error?: string;
+};
+
+const statusMap: Record<string, Task['status']> = {
+  OPEN: 'available',
+  ASSIGNED: 'in-progress',
+  DONE: 'completed',
+  pending: 'available',
+  'in-progress': 'in-progress',
+};
+
+function mapApiTaskToTask(apiTask: ApiTask): Task {
+  return {
+    id: String(apiTask.id),
+    title: apiTask.title,
+    description: 'Task details are managed by the task owner.',
+    timeEstimate: 10,
+    reward: Number(apiTask.price) || 0,
+    difficulty: 'Medium',
+    category: 'General',
+    status: statusMap[apiTask.status] || 'available',
+    postedBy: 'Marketplace',
+    assignedTo: apiTask.assignedTo || undefined,
+    createdAt: 'Just now',
+  };
+}
+
+function upsertTaskById(tasks: Task[], incoming: Task): Task[] {
+  const index = tasks.findIndex((item) => item.id === incoming.id);
+  if (index === -1) {
+    return [incoming, ...tasks];
+  }
+
+  const next = [...tasks];
+  next[index] = { ...next[index], ...incoming };
+  return next;
+}
+
+function unwrapApiData<T>(payload: ApiEnvelope<T> | T): T {
+  if (payload && typeof payload === 'object' && 'data' in (payload as ApiEnvelope<T>)) {
+    return ((payload as ApiEnvelope<T>).data ?? payload) as T;
+  }
+  return payload as T;
+}
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>({
@@ -42,6 +124,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     transactions: mockTransactions,
     notifications: mockNotifications,
     sellerTasks: mockTasks.slice(0, 3).map(t => ({ ...t, postedBy: 'You', status: 'in-progress' as const })),
+    tasksLoading: false,
+    tasksError: null,
   });
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
 
@@ -66,62 +150,129 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const acceptTask = useCallback((taskId: string) => {
-    setState(s => {
-      const task = s.tasks.find(t => t.id === taskId);
-      if (!task) return s;
-      toast.success(`Task accepted: ${task.title}`);
-      return {
-        ...s,
-        activeTask: { ...task, status: 'in-progress' },
-        tasks: s.tasks.map(t => t.id === taskId ? { ...t, status: 'in-progress' as const } : t),
-        taskTimer: task.timeEstimate * 60,
-      };
-    });
+  const acceptTask = useCallback(async (taskId: string) => {
+    try {
+      const response = await fetch(apiPath(`/task/${taskId}/accept`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const raw = await response.json().catch(() => ({}));
+      const data = unwrapApiData<ApiTask>(raw);
+
+      if (!response.ok) {
+        const errorMessage = (raw as ApiEnvelope<ApiTask>).error || 'Unable to accept task.';
+        toast.error(errorMessage);
+        return;
+      }
+
+      const acceptedTask = mapApiTaskToTask(data);
+      setState(s => {
+        const mergedTask = s.tasks.find(t => t.id === acceptedTask.id)
+          ? { ...s.tasks.find(t => t.id === acceptedTask.id)!, ...acceptedTask }
+          : acceptedTask;
+        return {
+          ...s,
+          activeTask: mergedTask,
+          tasks: upsertTaskById(s.tasks, mergedTask),
+          taskTimer: mergedTask.timeEstimate * 60,
+        };
+      });
+
+      toast.success(`Task accepted: ${acceptedTask.title}`);
+    } catch (error) {
+      toast.error(connectionErrorMessage());
+    }
   }, []);
 
-  const completeTask = useCallback(() => {
-    setState(s => {
-      if (!s.activeTask) return s;
-      const earned = s.activeTask.reward;
-      const newTx: Transaction = {
-        id: `t${Date.now()}`,
-        type: 'earned',
-        amount: earned,
-        description: s.activeTask.title,
-        date: 'Just now',
-        status: 'completed',
-      };
+  const completeTask = useCallback(async () => {
+    if (!state.activeTask) return;
+
+    try {
+      const response = await fetch(apiPath(`/task/${state.activeTask.id}/complete`), {
+        method: 'POST',
+      });
+      const raw = await response.json().catch(() => ({}));
+      const data = unwrapApiData<ApiTask>(raw);
+
+      if (!response.ok) {
+        const errorMessage = (raw as ApiEnvelope<ApiTask>).error || 'Unable to complete task.';
+        toast.error(errorMessage);
+        return;
+      }
+
+      const completedTask = mapApiTaskToTask(data);
+
+      setState(s => {
+        const earned = s.activeTask?.reward ?? completedTask.reward;
+        const newTx: Transaction = {
+          id: `t${Date.now()}`,
+          type: 'earned',
+          amount: earned,
+          description: completedTask.title,
+          date: 'Just now',
+          status: 'completed',
+        };
+
+        return {
+          ...s,
+          balance: s.balance + earned,
+          activeTask: null,
+          taskTimer: 0,
+          tasks: upsertTaskById(s.tasks, { ...completedTask, reward: earned }),
+          transactions: [newTx, ...s.transactions],
+          notifications: [
+            {
+              id: `n${Date.now()}`,
+              type: 'payment',
+              title: 'Payment received!',
+              message: `You earned $${earned.toFixed(2)}`,
+              time: 'Just now',
+              read: false,
+            },
+            ...s.notifications,
+          ],
+        };
+      });
       setShowPaymentSuccess(true);
-      return {
-        ...s,
-        balance: s.balance + earned,
-        activeTask: null,
-        taskTimer: 0,
-        tasks: s.tasks.map(t => t.id === s.activeTask!.id ? { ...t, status: 'completed' as const } : t),
-        transactions: [newTx, ...s.transactions],
-        notifications: [
-          { id: `n${Date.now()}`, type: 'payment', title: 'Payment received!', message: `You earned $${earned.toFixed(2)}`, time: 'Just now', read: false },
-          ...s.notifications,
-        ],
-      };
-    });
-  }, []);
+    } catch (error) {
+      toast.error(connectionErrorMessage());
+    }
+  }, [state.activeTask]);
 
-  const postTask = useCallback((task: Omit<Task, 'id' | 'status' | 'createdAt' | 'postedBy'>) => {
-    const newTask: Task = {
-      ...task,
-      id: `t${Date.now()}`,
-      status: 'available',
-      postedBy: 'You',
-      createdAt: 'Just now',
-    };
-    setState(s => ({
-      ...s,
-      sellerTasks: [newTask, ...s.sellerTasks],
-      tasks: [newTask, ...s.tasks],
-    }));
-    toast.success('Task posted successfully!');
+  const postTask = useCallback(async (task: Omit<Task, 'id' | 'status' | 'createdAt' | 'postedBy'>) => {
+    try {
+      const response = await fetch(apiPath('/task'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: task.title, price: task.reward }),
+      });
+      const raw = await response.json().catch(() => ({}));
+      const data = unwrapApiData<ApiTask>(raw);
+
+      if (!response.ok) {
+        const errorMessage = (raw as ApiEnvelope<ApiTask>).error || 'Unable to post task.';
+        toast.error(errorMessage);
+        return;
+      }
+
+      const createdTask = {
+        ...mapApiTaskToTask(data),
+        description: task.description,
+        timeEstimate: task.timeEstimate,
+        difficulty: task.difficulty,
+        category: task.category,
+        postedBy: 'You',
+      };
+
+      setState(s => ({
+        ...s,
+        sellerTasks: upsertTaskById(s.sellerTasks, createdTask),
+        tasks: upsertTaskById(s.tasks, createdTask),
+      }));
+      toast.success('Task posted successfully!');
+    } catch (error) {
+      toast.error(connectionErrorMessage());
+    }
   }, []);
 
   const markNotificationRead = useCallback((id: string) => {
@@ -129,6 +280,73 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...s,
       notifications: s.notifications.map(n => n.id === id ? { ...n, read: true } : n),
     }));
+  }, []);
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      setState(s => ({ ...s, tasksLoading: true, tasksError: null }));
+      try {
+        const response = await fetch(apiPath('/tasks'));
+        const raw = await response.json().catch(() => ([]));
+        const data = unwrapApiData<ApiTask[]>(raw);
+
+        if (!response.ok) {
+          const errorMessage = (raw as ApiEnvelope<ApiTask[]>).error || 'Failed to load tasks.';
+          setState(s => ({ ...s, tasksLoading: false, tasksError: errorMessage }));
+          return;
+        }
+
+        const normalizedTasks = (Array.isArray(data) ? data : []).map(mapApiTaskToTask);
+        setState(s => ({
+          ...s,
+          tasksLoading: false,
+          tasks: normalizedTasks.length ? normalizedTasks : s.tasks,
+          sellerTasks: s.sellerTasks,
+        }));
+      } catch (error) {
+        setState(s => ({ ...s, tasksLoading: false, tasksError: connectionErrorMessage() }));
+      }
+    };
+
+    fetchTasks();
+  }, []);
+
+  useEffect(() => {
+    const socket: Socket = API_BASE_URL
+      ? io(API_BASE_URL, { transports: ['websocket', 'polling'] })
+      : io({ transports: ['websocket', 'polling'] });
+
+    socket.on('task:created', (rawTask: ApiTask) => {
+      const mappedTask = mapApiTaskToTask(rawTask);
+      setState(s => ({ ...s, tasks: upsertTaskById(s.tasks, mappedTask) }));
+    });
+
+    socket.on('task:accepted', (rawTask: ApiTask) => {
+      const mappedTask = mapApiTaskToTask(rawTask);
+      setState(s => ({
+        ...s,
+        tasks: upsertTaskById(s.tasks, mappedTask),
+        activeTask: s.activeTask?.id === mappedTask.id ? { ...s.activeTask, ...mappedTask } : s.activeTask,
+      }));
+    });
+
+    socket.on('task:completed', (rawTask: ApiTask) => {
+      const mappedTask = mapApiTaskToTask(rawTask);
+      setState(s => ({
+        ...s,
+        tasks: upsertTaskById(s.tasks, mappedTask),
+        activeTask: s.activeTask?.id === mappedTask.id ? null : s.activeTask,
+        taskTimer: s.activeTask?.id === mappedTask.id ? 0 : s.taskTimer,
+      }));
+    });
+
+    socket.on('connect_error', () => {
+      setState(s => ({ ...s, tasksError: s.tasksError || 'Realtime connection unavailable.' }));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   return (
