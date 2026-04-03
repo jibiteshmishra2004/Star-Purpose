@@ -42,7 +42,7 @@ export default function Signup() {
           <Card>
             <CardHeader className="text-center">
               <CardTitle className="text-2xl">{step === 1 ? 'Create Account' : 'Pick Your Skills'}</CardTitle>
-              <CardDescription>{step === 1 ? 'Join Star Purpose and start earning' : 'Help us match you with the right tasks'}</CardDescription>
+              <CardDescription>{step === 1 ? 'Join STAR PURPOSE and start earning' : 'Help us match you with the right tasks'}</CardDescription>
             </CardHeader>
             <CardContent>
               {step === 1 && (

@@ -23,6 +23,7 @@ export default function Navbar() {
       setLogoClicks(0);
     }
     setTimeout(() => setLogoClicks(0), 3000);
+    navigate('/');
   };
 
   const dashboardPath = role === 'seller' ? '/seller' : role === 'admin' ? '/admin' : '/dashboard';
@@ -32,11 +33,11 @@ export default function Navbar() {
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 glass">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <button onClick={handleLogoClick} className="flex items-center gap-2 select-none">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">★</span>
+          <button onClick={handleLogoClick} className="flex items-center gap-3 select-none hover:opacity-80 transition-opacity" title="STAR PURPOSE - Return to home">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <img src="/logo-dark.svg" alt="STAR PURPOSE" className="w-6 h-6" />
             </div>
-            <span className="font-bold text-lg text-foreground">Star Purpose</span>
+            <span className="font-bold text-lg bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hidden sm:inline">STAR PURPOSE</span>
           </button>
 
           {/* Desktop nav */}

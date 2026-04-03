@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Clock, Zap, DollarSign, ArrowRight, Star, CheckCircle, Users, Shield } from 'lucide-react';
 import { testimonials } from '@/data/mockData';
 import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -68,7 +69,7 @@ export default function Index() {
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4">
           <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4 text-foreground">Why Star Purpose?</h2>
+            <h2 className="text-3xl font-bold mb-4 text-foreground">Why STAR PURPOSE?</h2>
             <p className="text-muted-foreground max-w-xl mx-auto">A micro-task ecosystem designed for speed, simplicity, and instant rewards.</p>
           </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -138,11 +139,7 @@ export default function Index() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2024 Star Purpose. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

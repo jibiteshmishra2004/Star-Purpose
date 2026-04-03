@@ -101,6 +101,6 @@ export const chartData = {
 
 export const testimonials = [
   { name: 'Maria G.', role: 'Student', text: 'I earn $50–$80 a week just doing tasks between classes. It\'s the perfect side hustle!', rating: 5 },
-  { name: 'David L.', role: 'Freelancer', text: 'Star Purpose fills my gaps between client projects. Quick tasks, instant pay — what\'s not to love?', rating: 5 },
+  { name: 'David L.', role: 'Freelancer', text: 'STAR PURPOSE fills my gaps between client projects. Quick tasks, instant pay — what\'s not to love?', rating: 5 },
   { name: 'Priya S.', role: 'Stay-at-home Mom', text: 'I love that I can pick tasks that fit my schedule. Even 10 free minutes can earn me something.', rating: 4 },
 ];

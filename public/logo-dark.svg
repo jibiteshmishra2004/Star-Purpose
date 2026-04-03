@@ -1,0 +1,23 @@
+<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <defs>
+    <linearGradient id="logoDarkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main circle background -->
+  <circle cx="64" cy="64" r="60" fill="url(#logoDarkGradient)"/>
+  
+  <!-- Star shape (top) -->
+  <path d="M 64 28 L 68.5 38 L 79 39.5 L 71 47 L 73.5 57.5 L 64 53 L 54.5 57.5 L 57 47 L 49 39.5 L 59.5 38 Z" fill="white"/>
+  
+  <!-- Pin/Location marker (bottom) -->
+  <g transform="translate(64, 65)">
+    <!-- Pin drop shape -->
+    <path d="M 0 0 C -8 -8 -12 -16 -12 -22 C -12 -32 -6.6 -38 0 -38 C 6.6 -38 12 -32 12 -22 C 12 -16 8 -8 0 0 Z" fill="white"/>
+    <!-- Inner dot on pin -->
+    <circle cx="0" cy="-24" r="4" fill="url(#logoDarkGradient)"/>
+  </g>
+</svg>

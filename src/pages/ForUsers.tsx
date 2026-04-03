@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Clock, DollarSign, Zap, TrendingUp, ArrowRight, CheckCircle } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 
 const benefits = [
   { icon: Clock, title: 'Quick Tasks', desc: '5–15 minute tasks that fit any schedule' },
@@ -71,8 +72,8 @@ export default function ForUsers() {
         </div>
       </section>
 
-      <footer className="border-t border-border py-8">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">© 2024 Star Purpose</div>
+      <footer className="border-t border-border">
+        <Footer />
       </footer>
     </div>
   );

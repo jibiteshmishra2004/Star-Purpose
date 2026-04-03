@@ -28,8 +28,8 @@ export default function Login() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
           <Card>
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Welcome Back</CardTitle>
-              <CardDescription>Log in to your Star Purpose account</CardDescription>
+              <CardTitle className="text-2xl">Welcome to STAR PURPOSE</CardTitle>
+              <CardDescription>Log in to your account</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex rounded-lg bg-muted p-1 mb-6">
