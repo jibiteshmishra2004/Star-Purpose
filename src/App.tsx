@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/context/AppContext";
+import { GlobalBackground } from "@/components/layout/GlobalBackground";
+import { RequireRole } from "@/components/auth/RequireRole";
 import Index from "./pages/Index";
 import ForUsers from "./pages/ForUsers";
 import ForSellers from "./pages/ForSellers";
@@ -12,6 +14,7 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import SellerDashboard from "./pages/SellerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminSignin from "./pages/AdminSignin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,6 +23,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AppProvider>
+        <GlobalBackground />
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -29,9 +33,31 @@ const App = () => (
             <Route path="/for-sellers" element={<ForSellers />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/seller" element={<SellerDashboard />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route
+              path="/dashboard"
+              element={
+                <RequireRole role="user">
+                  <Dashboard />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/seller"
+              element={
+                <RequireRole role="seller">
+                  <SellerDashboard />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <RequireRole role="admin">
+                  <AdminDashboard />
+                </RequireRole>
+              }
+            />
+            <Route path="/admin-signin" element={<AdminSignin />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

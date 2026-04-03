@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,16 +17,30 @@ const difficultyColor: Record<string, string> = {
 };
 
 export default function Dashboard() {
+  const [searchParams] = useSearchParams();
   const {
     tenMinMode, toggleTenMinMode, tasks, activeTask, taskTimer,
-    acceptTask, completeTask, balance, transactions, notifications,
+    acceptTask, submitWork, balance, transactions, notifications,
     markNotificationRead, showPaymentSuccess, setShowPaymentSuccess, tasksLoading, tasksError,
-    acceptingTaskId, completingTask,
+    acceptingTaskId, submittingTask, currentUser,
   } = useApp();
   const [tab, setTab] = useState<'tasks' | 'wallet' | 'history' | 'profile' | 'notifications'>('tasks');
   const [timer, setTimer] = useState(taskTimer);
 
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t === 'notifications') setTab('notifications');
+  }, [searchParams]);
+
   useEffect(() => { setTimer(taskTimer); }, [taskTimer]);
+
+  useEffect(() => {
+    if (!activeTask) {
+      setSubmitText('');
+      setSubmitLink('');
+      setSubmitFile(null);
+    }
+  }, [activeTask]);
 
   useEffect(() => {
     if (!activeTask || timer <= 0) return;
@@ -34,7 +49,15 @@ export default function Dashboard() {
   }, [activeTask, timer]);
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
-  const availableTasks = tasks.filter(t => t.status === 'available');
+  const [submitText, setSubmitText] = useState('');
+  const [submitLink, setSubmitLink] = useState('');
+  const [submitFile, setSubmitFile] = useState<File | null>(null);
+
+  const availableTasks = tasks.filter((t) => {
+    if (t.backendStatus !== 'OPEN') return false;
+    if (tenMinMode && t.timeEstimate > 15) return false;
+    return true;
+  });
   const unread = notifications.filter(n => !n.read).length;
 
   const tabs = [
@@ -46,7 +69,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative z-10 min-h-screen border-l-[3px] border-emerald-600/35 bg-background">
       <Navbar />
 
       {/* Payment Success Overlay */}
@@ -74,7 +97,12 @@ export default function Dashboard() {
 
       <div className="pt-20 pb-8 px-4">
         <div className="container mx-auto max-w-4xl">
-          {/* 10-min mode toggle */}
+          <div className="mb-6">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Earner</p>
+            <h1 className="text-2xl font-bold text-foreground">Your tasks</h1>
+            <p className="text-sm text-muted-foreground mt-1">Accept open work, run the timer, and mark complete when you are done.</p>
+          </div>
+          {/* Quick-task filter */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
             <button onClick={toggleTenMinMode}
               className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
@@ -87,8 +115,10 @@ export default function Dashboard() {
                   <Timer className={`w-5 h-5 ${tenMinMode ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
                 </div>
                 <div className="text-left">
-                  <div className="font-semibold text-foreground">I Have 10 Minutes</div>
-                  <div className="text-xs text-muted-foreground">{tenMinMode ? 'Finding the best tasks for you...' : 'Tap to find quick tasks'}</div>
+                  <div className="font-semibold text-foreground">Quick tasks</div>
+                  <div className="text-xs text-muted-foreground">
+                    {tenMinMode ? 'Only showing tasks with a 15 min estimate or less.' : 'Toggle to filter shorter tasks.'}
+                  </div>
                 </div>
               </div>
               <div className={`w-12 h-7 rounded-full p-1 transition-colors ${tenMinMode ? 'bg-primary' : 'bg-muted'}`}>
@@ -99,26 +129,45 @@ export default function Dashboard() {
 
           {/* Active task banner */}
           <AnimatePresence>
-            {activeTask && (
+            {activeTask && activeTask.backendStatus === 'ASSIGNED' && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-6">
                 <Card className="border-primary/30 bg-accent/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <Badge className="gradient-primary text-primary-foreground">In Progress</Badge>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <Badge className="gradient-primary text-primary-foreground">In progress</Badge>
                       <span className="text-2xl font-mono font-bold text-primary">{formatTime(timer)}</span>
                     </div>
-                    <h3 className="font-semibold mb-1 text-foreground">{activeTask.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-3">{activeTask.description}</p>
-                    <div className="w-full bg-muted rounded-full h-2 mb-3">
+                    <h3 className="font-semibold text-foreground">{activeTask.title}</h3>
+                    <p className="text-sm text-muted-foreground">{activeTask.description}</p>
+                    {activeTask.requiresContact && activeTask.contactInfo?.trim() && (
+                      <div className="rounded-lg border border-border bg-card/80 p-3 text-sm">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">Contact</p>
+                        <p className="text-foreground whitespace-pre-wrap">{activeTask.contactInfo}</p>
+                      </div>
+                    )}
+                    <div className="w-full bg-muted rounded-full h-2">
                       <motion.div className="h-full rounded-full gradient-primary"
                         initial={{ width: '0%' }}
                         animate={{ width: `${Math.max(5, ((activeTask.timeEstimate * 60 - timer) / (activeTask.timeEstimate * 60)) * 100)}%` }}
                         transition={{ duration: 0.5 }} />
                     </div>
-                    <Button onClick={completeTask} disabled={completingTask} aria-busy={completingTask}
-                      className="w-full gradient-primary text-primary-foreground gap-2">
+                    <div className="space-y-2 pt-2 border-t border-border/60">
+                      <p className="text-xs font-medium text-muted-foreground">Submit your work</p>
+                      <Label className="text-xs">Description</Label>
+                      <Input value={submitText} onChange={(e) => setSubmitText(e.target.value)} placeholder="What you did / deliverables" />
+                      <Label className="text-xs">Link (optional)</Label>
+                      <Input value={submitLink} onChange={(e) => setSubmitLink(e.target.value)} placeholder="https://…" type="url" />
+                      <Label className="text-xs">File (optional)</Label>
+                      <Input type="file" onChange={(e) => setSubmitFile(e.target.files?.[0] ?? null)} className="cursor-pointer text-sm" />
+                    </div>
+                    <Button
+                      onClick={() => void submitWork({ text: submitText, link: submitLink, file: submitFile })}
+                      disabled={submittingTask}
+                      aria-busy={submittingTask}
+                      className="w-full gradient-primary text-primary-foreground gap-2"
+                    >
                       <CheckCircle className="w-4 h-4" />
-                      {completingTask ? 'Completing…' : 'Mark as Complete'}
+                      {submittingTask ? 'Submitting…' : 'Submit work'}
                     </Button>
                   </CardContent>
                 </Card>
@@ -212,7 +261,15 @@ export default function Dashboard() {
           {/* History tab */}
           {tab === 'history' && (
             <div className="space-y-3">
-              {tasks.filter(t => t.status === 'completed' || t.status === 'in-progress').map(task => (
+              {tasks
+                .filter(
+                  (t) =>
+                    t.assignedTo &&
+                    currentUser &&
+                    t.assignedTo.toLowerCase() === currentUser.email.toLowerCase() &&
+                    ['in-progress', 'submitted', 'rejected', 'completed'].includes(t.status),
+                )
+                .map((task) => (
                 <Card key={task.id}>
                   <CardContent className="p-4 flex items-center justify-between">
                     <div>
@@ -223,12 +280,22 @@ export default function Dashboard() {
                       <Badge variant={task.status === 'completed' ? 'default' : 'outline'} className={task.status === 'completed' ? 'bg-success text-success-foreground' : ''}>
                         {task.status}
                       </Badge>
-                      <p className="text-sm font-semibold mt-1 text-foreground">${task.reward.toFixed(2)}</p>
+                      <p className="text-sm font-semibold mt-1 text-foreground">
+                        {task.status === 'completed' && task.userEarning != null
+                          ? `+$${Number(task.userEarning).toFixed(2)}`
+                          : `$${task.reward.toFixed(2)}`}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
               ))}
-              {tasks.filter(t => t.status !== 'available').length === 0 && (
+              {tasks.filter(
+                (t) =>
+                  t.assignedTo &&
+                  currentUser &&
+                  t.assignedTo.toLowerCase() === currentUser.email.toLowerCase() &&
+                  ['in-progress', 'submitted', 'rejected', 'completed'].includes(t.status),
+              ).length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">No task history yet</div>
               )}
             </div>
@@ -267,19 +334,21 @@ export default function Dashboard() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-xl font-bold">AR</div>
+                  <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-xl font-bold">
+                    {currentUser?.avatar || '?'}
+                  </div>
                   <div>
-                    <h2 className="text-lg font-bold text-foreground">Alex Rivera</h2>
-                    <p className="text-sm text-muted-foreground">alex@example.com</p>
+                    <h2 className="text-lg font-bold text-foreground">{currentUser?.name || 'User'}</h2>
+                    <p className="text-sm text-muted-foreground">{currentUser?.email || '—'}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 mb-6">
                   <div className="text-center p-3 rounded-lg bg-muted/50">
-                    <p className="text-2xl font-bold text-foreground">48</p>
+                    <p className="text-2xl font-bold text-foreground">{currentUser?.tasksCompleted ?? 0}</p>
                     <p className="text-xs text-muted-foreground">Tasks Done</p>
                   </div>
                   <div className="text-center p-3 rounded-lg bg-muted/50">
-                    <p className="text-2xl font-bold text-foreground">4.8</p>
+                    <p className="text-2xl font-bold text-foreground">{(currentUser?.rating ?? 0).toFixed(1)}</p>
                     <p className="text-xs text-muted-foreground">Rating</p>
                   </div>
                   <div className="text-center p-3 rounded-lg bg-muted/50">
@@ -289,11 +358,15 @@ export default function Dashboard() {
                 </div>
                 <div className="space-y-3">
                   <Label className="text-sm font-medium text-foreground">Skills</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {['Surveys', 'Data Entry', 'Writing'].map(s => (
-                      <Badge key={s} variant="outline">{s}</Badge>
-                    ))}
-                  </div>
+                  {currentUser?.skills?.length ? (
+                    <div className="flex flex-wrap gap-2">
+                      {currentUser.skills.map((s) => (
+                        <Badge key={s} variant="outline">{s}</Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No skills listed yet.</p>
+                  )}
                 </div>
               </CardContent>
             </Card>

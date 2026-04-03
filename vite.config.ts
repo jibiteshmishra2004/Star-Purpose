@@ -28,6 +28,7 @@ export default defineConfig(async ({ mode }) => {
         "/tasks": { target: "http://localhost:5000", changeOrigin: true },
         "/task": { target: "http://localhost:5000", changeOrigin: true },
         "/api": { target: "http://localhost:5000", changeOrigin: true },
+        "/uploads": { target: "http://localhost:5000", changeOrigin: true },
       },
     },
     plugins,

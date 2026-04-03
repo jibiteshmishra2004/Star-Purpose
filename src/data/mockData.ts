@@ -1,3 +1,9 @@
+export type TaskSubmission = {
+  text?: string;
+  link?: string;
+  file?: string | null;
+};
+
 export interface Task {
   id: string;
   title: string;
@@ -6,10 +12,29 @@ export interface Task {
   reward: number;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   category: string;
-  status: 'available' | 'in-progress' | 'completed' | 'pending-review';
+  status:
+    | 'available'
+    | 'in-progress'
+    | 'completed'
+    | 'pending-review'
+    | 'pending-payment'
+    | 'submitted'
+    | 'rejected'
+    | 'approved';
+  /** Raw API status for payment / pipeline logic */
+  backendStatus?: string;
   postedBy: string;
   assignedTo?: string;
   createdAt: string;
+  /** Set when task is created by a seller (matches API) */
+  sellerId?: string;
+  commissionRate?: number;
+  commission?: number;
+  userEarning?: number;
+  adminRevenue?: number;
+  contactInfo?: string;
+  requiresContact?: boolean;
+  submission?: TaskSubmission | null;
 }
 
 export interface User {

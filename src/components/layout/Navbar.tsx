@@ -1,121 +1,220 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Bell, LogOut, LayoutDashboard, Shield } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/context/AppContext';
-import AdminLoginModal from '@/components/auth/AdminLoginModal';
+import { NotificationsPopover } from '@/components/layout/NotificationsPopover';
+import { cn } from '@/lib/utils';
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [adminModalOpen, setAdminModalOpen] = useState(false);
-  const { isLoggedIn, role, logout, notifications } = useApp();
+  const { isLoggedIn, role, logout, notifications, markNotificationRead } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const dashboardPath = role === 'seller' ? '/seller' : role === 'admin' ? '/admin' : '/dashboard';
-  const isDashboard = ['/dashboard', '/seller', '/admin'].some(p => location.pathname.startsWith(p));
+  const viewAllHref =
+    role === 'user'
+      ? '/dashboard?tab=notifications'
+      : role === 'seller'
+        ? '/seller?tab=notifications'
+        : null;
+
+  const mainActive =
+    role === 'user'
+      ? location.pathname.startsWith('/dashboard')
+      : role === 'seller'
+        ? location.pathname.startsWith('/seller')
+        : location.pathname.startsWith('/admin');
 
   return (
-    <>
-      <nav className="fixed top-0 left-0 right-0 z-50 glass">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 select-none hover:opacity-80 transition-opacity" title="STAR PURPOSE - Return to home">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
-              <img src="/logo-dark.svg" alt="STAR PURPOSE" className="w-6 h-6" />
-            </div>
-            <span className="font-bold text-lg bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hidden sm:inline">STAR PURPOSE</span>
-          </Link>
+    <nav className="glass-nav fixed left-0 right-0 top-0 z-50">
+      <div className="container mx-auto flex h-[4.25rem] items-center px-4">
+        <Link
+          to="/"
+          className="flex shrink-0 select-none items-center gap-3 transition-opacity hover:opacity-90"
+          title="Star Purpose — Home"
+        >
+          <img
+            src="/star-purpose-logo.png"
+            alt="Star Purpose"
+            className="h-9 w-auto max-h-11 max-w-[min(100%,200px)] object-contain object-left md:h-10"
+          />
+        </Link>
 
-          {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-6">
-            {!isLoggedIn ? (
-              <>
-                <Link to="/for-users" className="text-sm text-muted-foreground hover:text-foreground transition-colors">For Users</Link>
-                <Link to="/for-sellers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">For Sellers</Link>
-                <Link to="/login">
-                  <Button variant="ghost" size="sm">Log In</Button>
-                </Link>
-                <Link to="/signup">
-                  <Button size="sm">Get Started</Button>
-                </Link>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => setAdminModalOpen(true)}
-                >
-                  <Shield className="w-4 h-4" /> Admin
+        <div className="hidden flex-1 items-center justify-end gap-1 md:flex">
+          {!isLoggedIn ? (
+            <>
+              <Link to="/login">
+                <Button variant="ghost" size="sm" className="text-muted-foreground">
+                  Log In
                 </Button>
-              </>
-            ) : (
-              <>
-                <Link to={dashboardPath}>
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    <LayoutDashboard className="w-4 h-4" /> Dashboard
+              </Link>
+              <Link to="/signup">
+                <Button size="sm" className="gradient-primary text-primary-foreground shadow-sm">
+                  Get Started
+                </Button>
+              </Link>
+              <span className="mx-2 hidden h-5 w-px bg-border sm:block" aria-hidden />
+              <Link to="/admin-signin">
+                <Button variant="outline" size="sm" className="gap-1.5 border-primary/25 text-primary hover:bg-primary/5">
+                  <Shield className="h-3.5 w-3.5" /> Admin
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              {role === 'user' && (
+                <Link to="/dashboard">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      'gap-2 text-muted-foreground',
+                      mainActive && 'bg-muted text-foreground',
+                    )}
+                  >
+                    <LayoutDashboard className="h-4 w-4" /> Dashboard
                   </Button>
                 </Link>
-                <button className="relative p-2 rounded-lg hover:bg-muted transition-colors" onClick={() => navigate(dashboardPath + '?tab=notifications')}>
-                  <Bell className="w-5 h-5 text-muted-foreground" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center">
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
-                <Button variant="ghost" size="sm" onClick={() => { logout(); navigate('/'); }} className="gap-2">
-                  <LogOut className="w-4 h-4" /> Logout
-                </Button>
-              </>
-            )}
-          </div>
-
-          {/* Mobile hamburger */}
-          <button className="md:hidden p-2" onClick={() => setMobileOpen(!mobileOpen)}>
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+              )}
+              {role === 'seller' && (
+                <Link to="/seller">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      'gap-2 text-muted-foreground',
+                      mainActive && 'bg-muted text-foreground',
+                    )}
+                  >
+                    <LayoutDashboard className="h-4 w-4" /> Dashboard
+                  </Button>
+                </Link>
+              )}
+              {role === 'admin' && (
+                <Link to="/admin">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      'gap-2 text-muted-foreground',
+                      mainActive && 'bg-muted text-foreground',
+                    )}
+                  >
+                    <LayoutDashboard className="h-4 w-4" /> Admin
+                  </Button>
+                </Link>
+              )}
+              {role !== 'admin' && (
+                <NotificationsPopover
+                  notifications={notifications}
+                  markNotificationRead={markNotificationRead}
+                  viewAllHref={viewAllHref}
+                  unreadCount={unreadCount}
+                />
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-2 text-muted-foreground"
+                onClick={() => {
+                  logout();
+                  navigate('/');
+                }}
+              >
+                <LogOut className="h-4 w-4" /> Logout
+              </Button>
+            </>
+          )}
         </div>
 
-        <AnimatePresence>
-          {mobileOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="md:hidden border-t border-border overflow-hidden bg-background"
-            >
-              <div className="p-4 flex flex-col gap-3">
-                {!isLoggedIn ? (
-                  <>
-                    <Link to="/for-users" onClick={() => setMobileOpen(false)} className="py-2 text-sm">For Users</Link>
-                    <Link to="/for-sellers" onClick={() => setMobileOpen(false)} className="py-2 text-sm">For Sellers</Link>
-                    <Link to="/login" onClick={() => setMobileOpen(false)}><Button variant="ghost" className="w-full">Log In</Button></Link>
-                    <Link to="/signup" onClick={() => setMobileOpen(false)}><Button className="w-full">Get Started</Button></Link>
-                    <Button
-                      variant="outline"
-                      className="w-full gap-2"
-                      onClick={() => {
-                        setMobileOpen(false);
-                        setAdminModalOpen(true);
-                      }}
-                    >
-                      <Shield className="w-4 h-4" /> Admin Access
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Link to={dashboardPath} onClick={() => setMobileOpen(false)} className="py-2 text-sm flex items-center gap-2"><LayoutDashboard className="w-4 h-4" /> Dashboard</Link>
-                    <button onClick={() => { logout(); navigate('/'); setMobileOpen(false); }} className="py-2 text-sm flex items-center gap-2 text-destructive"><LogOut className="w-4 h-4" /> Logout</button>
-                  </>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </nav>
+        <button
+          type="button"
+          className="ml-auto p-2 md:ml-0 md:hidden"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label="Menu"
+        >
+          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
 
-      <AdminLoginModal open={adminModalOpen} onOpenChange={setAdminModalOpen} />
-    </>
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-t border-border bg-background md:hidden"
+          >
+            <div className="flex flex-col gap-2 p-4">
+              {!isLoggedIn ? (
+                <>
+                  <Link to="/login" onClick={() => setMobileOpen(false)}>
+                    <Button variant="ghost" className="w-full">
+                      Log In
+                    </Button>
+                  </Link>
+                  <Link to="/signup" onClick={() => setMobileOpen(false)}>
+                    <Button className="w-full gradient-primary text-primary-foreground">Get Started</Button>
+                  </Link>
+                  <div className="my-1 border-t border-border" />
+                  <Link to="/admin-signin" onClick={() => setMobileOpen(false)}>
+                    <Button variant="outline" className="w-full gap-2 border-primary/25 text-primary">
+                      <Shield className="h-4 w-4" /> Admin
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  {role === 'user' && (
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-2 py-2 text-sm"
+                    >
+                      <LayoutDashboard className="h-4 w-4" /> Dashboard
+                    </Link>
+                  )}
+                  {role === 'seller' && (
+                    <Link to="/seller" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 py-2 text-sm">
+                      <LayoutDashboard className="h-4 w-4" /> Dashboard
+                    </Link>
+                  )}
+                  {role === 'admin' && (
+                    <Link to="/admin" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 py-2 text-sm">
+                      <LayoutDashboard className="h-4 w-4" /> Admin
+                    </Link>
+                  )}
+                  {role !== 'admin' && (
+                    <div className="flex items-center justify-between border-t border-border pt-2">
+                      <span className="text-xs text-muted-foreground">Notifications</span>
+                      <NotificationsPopover
+                        notifications={notifications}
+                        markNotificationRead={markNotificationRead}
+                        viewAllHref={viewAllHref}
+                        unreadCount={unreadCount}
+                      />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      navigate('/');
+                      setMobileOpen(false);
+                    }}
+                    className="flex items-center gap-2 py-2 text-sm text-destructive"
+                  >
+                    <LogOut className="h-4 w-4" /> Logout
+                  </button>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </nav>
   );
 }

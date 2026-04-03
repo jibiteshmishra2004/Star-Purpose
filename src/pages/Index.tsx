@@ -1,144 +1,263 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Clock, Zap, DollarSign, ArrowRight, Star, CheckCircle, Users, Shield } from 'lucide-react';
+import { ArrowRight, Store, UserCircle, ChevronRight, CheckCircle } from 'lucide-react';
 import { testimonials } from '@/data/mockData';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.5 } }),
+const API_BASE = import.meta.env.VITE_API_URL ? String(import.meta.env.VITE_API_URL).replace(/\/$/, '') : '';
+function apiPath(p: string) {
+  const x = p.startsWith('/') ? p : `/${p}`;
+  return API_BASE ? `${API_BASE}${x}` : x;
+}
+
+type PublicStats = {
+  userCount: number;
+  taskCount: number;
+  completedCount: number;
+  paidOutTotal: number;
 };
 
-const features = [
-  { icon: Clock, title: 'Instant Tasks', desc: 'Pick up tasks that fit your schedule — from 5 to 15 minutes.' },
-  { icon: Zap, title: 'Real-Time Matching', desc: 'Our system matches you with tasks based on your skills instantly.' },
-  { icon: DollarSign, title: 'Instant Payment', desc: 'Get paid the moment your task is verified. No waiting.' },
-  { icon: Shield, title: 'Trusted Platform', desc: 'Verified users and sellers ensure quality on both sides.' },
-];
+function formatInt(n: number) {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(n);
+}
 
-const steps = [
-  { num: '01', title: 'Sign Up', desc: 'Create your free account in under a minute.' },
-  { num: '02', title: 'Browse Tasks', desc: 'Find tasks that match your skills and available time.' },
-  { num: '03', title: 'Complete & Earn', desc: 'Finish the task and get paid instantly.' },
-];
+function formatMoney(n: number) {
+  return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+}
 
 export default function Index() {
+  const [stats, setStats] = useState<PublicStats | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(apiPath('/api/stats'));
+        const json = await res.json().catch(() => ({}));
+        const data = json?.data ?? json;
+        if (!cancelled && data && typeof data.userCount === 'number') {
+          setStats({
+            userCount: data.userCount,
+            taskCount: data.taskCount,
+            completedCount: data.completedCount,
+            paidOutTotal: data.paidOutTotal,
+          });
+        }
+      } catch {
+        /* optional */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-background">
+    <div id="top" className="relative z-10 min-h-screen">
       <Navbar />
 
       {/* Hero */}
-      <section className="pt-24 pb-16 md:pt-32 md:pb-24 gradient-hero">
-        <div className="container mx-auto px-4 text-center">
-          <motion.div initial="hidden" animate="visible" className="max-w-3xl mx-auto">
-            <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent text-accent-foreground text-sm font-medium mb-6">
-              <Zap className="w-3.5 h-3.5" /> Now in Beta — Join 10,000+ early users
-            </motion.div>
-            <motion.h1 variants={fadeUp} custom={1} className="text-4xl md:text-6xl font-bold tracking-tight mb-6 text-foreground">
-              Turn Idle Minutes into{' '}
-              <span className="gradient-text">Instant Money</span>
-            </motion.h1>
-            <motion.p variants={fadeUp} custom={2} className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Complete quick tasks in 5–15 minutes and earn real money instantly. Whether you have a coffee break or a commute, make every minute count.
-            </motion.p>
-            <motion.div variants={fadeUp} custom={3} className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/signup?role=user">
-                <Button size="lg" className="gradient-primary text-primary-foreground px-8 gap-2 w-full sm:w-auto">
-                  I'm a User — Start Earning <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-              <Link to="/signup?role=seller">
-                <Button size="lg" variant="outline" className="px-8 gap-2 w-full sm:w-auto">
-                  I'm a Seller — Post Tasks
-                </Button>
-              </Link>
-            </motion.div>
-            <motion.div variants={fadeUp} custom={4} className="mt-8 flex items-center justify-center gap-6 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1"><Users className="w-4 h-4" /> 10K+ Users</span>
-              <span className="flex items-center gap-1"><CheckCircle className="w-4 h-4" /> 50K+ Tasks Done</span>
-              <span className="flex items-center gap-1"><DollarSign className="w-4 h-4" /> $200K+ Paid Out</span>
-            </motion.div>
+      <section className="gradient-hero px-4 pb-16 pt-28 md:pb-24 md:pt-36">
+        <div className="container mx-auto max-w-3xl text-center">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-4xl font-bold tracking-tight text-foreground md:text-5xl"
+          >
+            Micro-tasks, <span className="text-primary">real payouts</span>
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
+            className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground"
+          >
+            Pick up short jobs, post work for others, and track everything in one place — simple flows for earners and
+            task owners.
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.16 }}
+            className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center"
+          >
+            <Link to="/signup" className="sm:min-w-[180px]">
+              <Button size="lg" className="h-11 w-full gap-2 gradient-primary text-primary-foreground">
+                Get started <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link to="/login" className="sm:min-w-[180px]">
+              <Button size="lg" variant="outline" className="h-11 w-full border-border bg-background">
+                Log in
+              </Button>
+            </Link>
           </motion.div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4 text-foreground">Why STAR PURPOSE?</h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">A micro-task ecosystem designed for speed, simplicity, and instant rewards.</p>
-          </motion.div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((f, i) => (
-              <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
-                <Card className="h-full hover:shadow-md transition-shadow border-border/50">
-                  <CardContent className="p-6">
-                    <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center mb-4">
-                      <f.icon className="w-5 h-5 text-accent-foreground" />
-                    </div>
-                    <h3 className="font-semibold mb-2 text-foreground">{f.title}</h3>
-                    <p className="text-sm text-muted-foreground">{f.desc}</p>
-                  </CardContent>
-                </Card>
+      {/* Stats — card style */}
+      <section className="px-4 py-12">
+        <div className="container mx-auto max-w-5xl">
+          <div className="grid gap-6 md:grid-cols-3">
+            {[
+              { label: 'Members', value: stats ? formatInt(stats.userCount) : '—', sub: 'Signed up' },
+              { label: 'Tasks', value: stats ? formatInt(stats.taskCount) : '—', sub: 'On the platform' },
+              { label: 'Paid out', value: stats ? formatMoney(stats.paidOutTotal) : '—', sub: 'Completed work' },
+            ].map((row, i) => (
+              <motion.div
+                key={row.label}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.06 }}
+                className="stat-card text-center"
+              >
+                <p className="text-sm font-medium text-muted-foreground">{row.label}</p>
+                <p className="mt-2 text-3xl font-bold tabular-nums text-foreground md:text-4xl">{row.value}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{row.sub}</p>
               </motion.div>
             ))}
+          </div>
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            Figures update when your API is connected.
+          </p>
+        </div>
+      </section>
+
+      {/* Roles */}
+      <section className="px-4 py-16 md:py-20">
+        <div className="container mx-auto max-w-5xl">
+          <div className="mb-12 text-center">
+            <h2 className="text-2xl font-bold text-foreground md:text-3xl">Built for two sides of the market</h2>
+            <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+              Choose how you want to participate — same product, tailored screens.
+            </p>
+          </div>
+          <div className="grid gap-8 md:grid-cols-2">
+            {[
+              {
+                title: 'Earners',
+                desc: 'Browse open tasks, accept what fits your time, and get paid when work is marked complete.',
+                icon: UserCircle,
+                href: '/signup?role=user',
+                cta: 'Create earner account',
+              },
+              {
+                title: 'Task owners',
+                desc: 'Publish tasks with price and time estimates. Listings stay in sync with your live backend.',
+                icon: Store,
+                href: '/signup?role=seller',
+                cta: 'Create owner account',
+              },
+            ].map((block) => {
+              const Icon = block.icon;
+              return (
+                <motion.div
+                  key={block.title}
+                  initial={{ opacity: 0, y: 14 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="rounded-2xl border border-border bg-card p-8 shadow-sm"
+                >
+                  <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground">{block.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{block.desc}</p>
+                  <Link
+                    to={block.href}
+                    className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                  >
+                    {block.cta} <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="py-16 md:py-24 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4 text-foreground">How It Works</h2>
-            <p className="text-muted-foreground">Three simple steps to start earning</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8 max-w-3xl mx-auto">
-            {steps.map((s, i) => (
-              <motion.div key={s.num} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.15 }} className="text-center">
-                <div className="text-4xl font-bold gradient-text mb-3">{s.num}</div>
-                <h3 className="font-semibold text-lg mb-2 text-foreground">{s.title}</h3>
-                <p className="text-sm text-muted-foreground">{s.desc}</p>
-              </motion.div>
+      {/* How it works */}
+      <section className="border-y border-primary/10 bg-primary/[0.03] px-4 py-16 md:py-20">
+        <div className="container mx-auto max-w-5xl">
+          <h2 className="text-center text-2xl font-bold text-foreground md:text-3xl">How it works</h2>
+          <p className="mx-auto mt-2 max-w-lg text-center text-muted-foreground">
+            Register, work or publish, then close the loop from your dashboard.
+          </p>
+          <ul className="mx-auto mt-12 max-w-2xl space-y-4">
+            {[
+              'Create an account as an earner or task owner.',
+              'Tasks and timers stay aligned with the server — no mock dashboards.',
+              'Complete work or review listings; balances and history update in-app.',
+            ].map((line, i) => (
+              <motion.li
+                key={line}
+                initial={{ opacity: 0, x: -8 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.06 }}
+                className="flex gap-3 text-left text-muted-foreground"
+              >
+                <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <span>{line}</span>
+              </motion.li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4 text-foreground">Loved by Users</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+      <section className="px-4 py-16 md:py-20">
+        <div className="container mx-auto max-w-5xl">
+          <h2 className="mb-10 text-center text-2xl font-bold text-foreground md:text-3xl">What people say</h2>
+          <div className="grid gap-6 md:grid-cols-3">
             {testimonials.map((t, i) => (
-              <motion.div key={t.name} initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
-                <Card className="h-full border-border/50">
-                  <CardContent className="p-6">
-                    <div className="flex gap-0.5 mb-3">
-                      {Array.from({ length: t.rating }).map((_, j) => (
-                        <Star key={j} className="w-4 h-4 fill-warning text-warning" />
-                      ))}
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">"{t.text}"</p>
-                    <div>
-                      <div className="font-medium text-sm text-foreground">{t.name}</div>
-                      <div className="text-xs text-muted-foreground">{t.role}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+              <motion.figure
+                key={t.name}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.05 }}
+                className="rounded-xl border border-border bg-card p-6 shadow-sm"
+              >
+                <blockquote className="text-sm leading-relaxed text-muted-foreground">&ldquo;{t.text}&rdquo;</blockquote>
+                <figcaption className="mt-4 text-sm font-medium text-foreground">
+                  {t.name}
+                  <span className="block text-xs font-normal text-muted-foreground">{t.role}</span>
+                </figcaption>
+              </motion.figure>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Bottom CTA */}
+      <section className="px-4 pb-20 pt-4">
+        <div className="container mx-auto max-w-3xl">
+          <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-sm md:p-12">
+            <h2 className="text-2xl font-bold text-foreground md:text-3xl">Ready to try it?</h2>
+            <p className="mx-auto mt-3 max-w-md text-muted-foreground">
+              Use the buttons above or open an account in a few clicks.
+            </p>
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link to="/signup">
+                <Button size="lg" className="h-11 w-full min-w-[160px] gradient-primary text-primary-foreground sm:w-auto">
+                  Sign up
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button size="lg" variant="outline" className="h-11 w-full min-w-[160px] sm:w-auto">
+                  I already have an account
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </div>
   );

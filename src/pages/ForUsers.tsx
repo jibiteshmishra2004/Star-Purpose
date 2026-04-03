@@ -15,7 +15,7 @@ const benefits = [
 
 export default function ForUsers() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative z-10 min-h-screen">
       <Navbar />
       <section className="pt-24 pb-16 md:pt-32 md:pb-24 gradient-hero">
         <div className="container mx-auto px-4">
