@@ -65,9 +65,9 @@ export default function Index() {
           <motion.h1
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-4xl font-bold tracking-tight text-foreground md:text-5xl"
+            className="text-5xl font-extrabold tracking-tighter sm:text-6xl md:text-7xl bg-clip-text text-transparent bg-gradient-to-br from-foreground to-primary drop-shadow-sm pb-2"
           >
-            Micro-tasks, <span className="text-primary">real payouts</span>
+            Star Purpose
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 16 }}
@@ -75,8 +75,7 @@ export default function Index() {
             transition={{ delay: 0.08 }}
             className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground"
           >
-            Pick up short jobs, post work for others, and track everything in one place — simple flows for earners and
-            task owners.
+            Converts idle minutes into instant tasks and quick earnings. Ensures fast execution and immediate payouts.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 16 }}

@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# Star-Purpose Marketplace
 
 TODO: Document your project here

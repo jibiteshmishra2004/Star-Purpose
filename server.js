@@ -168,6 +168,29 @@ app.get("/api/stats", (req, res) => {
   }
 });
 
+app.get("/api/config", (req, res) => {
+  return successResponse(res, {
+    commissionPct: Math.round(taskDb.defaultCommissionRate() * 100),
+  });
+});
+
+app.post("/api/config", requireAuth, requireRoles("admin"), (req, res) => {
+  try {
+    const { commissionPct } = req.body || {};
+    if (commissionPct !== undefined) {
+      const rate = Number(commissionPct);
+      if (!Number.isFinite(rate) || rate < 10 || rate > 20) {
+        return errorResponse(res, "Commission must be between 10% and 20%", 400);
+      }
+      taskDb.setPlatformConfig("PLATFORM_COMMISSION_PCT", String(rate / 100));
+    }
+    return successResponse(res, { commissionPct: Math.round(taskDb.defaultCommissionRate() * 100) });
+  } catch (e) {
+    console.error(e);
+    return errorResponse(res, "Unable to save config.", 500);
+  }
+});
+
 app.post("/api/register", (req, res) => {
   try {
     const { email, name, password, role, skills } = req.body || {};
@@ -501,8 +524,12 @@ app.post("/api/tasks/:id/accept", requireAuth, requireRoles("user"), (req, res) 
   }
 });
 
+// In production, serve the React frontend from the dist folder
+app.use(express.static(path.join(__dirname, "dist")));
+
+// For all other routes NOT caught by /api, return the React app
 app.use((req, res) => {
-  return errorResponse(res, "Route not found.", 404);
+  res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
 app.use((err, req, res, next) => {

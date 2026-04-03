@@ -9,6 +9,9 @@ import { Users, ListTodo, DollarSign, TrendingUp, Search, Flag, Ban, BarChart3, 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import Navbar from '@/components/layout/Navbar';
 import { toast } from 'sonner';
+import { useApp } from '@/context/AppContext';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 import type { SessionUser } from '@/context/AppContext';
 import { apiPath, getAuthHeaders } from '@/lib/api';
 
@@ -76,6 +79,28 @@ export default function AdminDashboard() {
   const [finance, setFinance] = useState<FinancePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  
+  const { commissionPct, fetchConfig } = useApp();
+  const [localCommission, setLocalCommission] = useState(15);
+  useEffect(() => { setLocalCommission(commissionPct); }, [commissionPct]);
+
+  const saveCommission = async () => {
+    try {
+      const res = await fetch(apiPath('/api/config'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ commissionPct: localCommission }),
+      });
+      if (res.ok) {
+        toast.success("Platform commission updated globally.");
+        await fetchConfig();
+      } else {
+        toast.error("Failed to update commission.");
+      }
+    } catch {
+      toast.error('Network error');
+    }
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -304,6 +329,27 @@ export default function AdminDashboard() {
                   </motion.div>
                 ))}
               </div>
+
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Global Platform Settings</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2 max-w-xl">
+                      <Label>Platform Commission Rate ({localCommission}%)</Label>
+                      <Slider
+                        value={[localCommission]}
+                        onValueChange={([v]) => setLocalCommission(v ?? 15)}
+                        min={10}
+                        max={20}
+                        step={1}
+                        className="py-2"
+                      />
+                      <p className="text-xs text-muted-foreground mb-4">Set the global commission taken from sellers. Applied to all new task payments.</p>
+                      <Button onClick={() => void saveCommission()} disabled={localCommission === commissionPct} className="bg-primary text-primary-foreground">
+                        {localCommission === commissionPct ? 'Saved' : 'Save Changes'}
+                      </Button>
+                    </div>
+                </CardContent>
+              </Card>
 
               {finance && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

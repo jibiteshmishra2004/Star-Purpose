@@ -43,6 +43,7 @@ interface AppState {
   submittingTask: boolean;
   postingTask: boolean;
   payingTaskId: string | null;
+  commissionPct: number;
 }
 
 interface AppContextType extends AppState {
@@ -65,6 +66,7 @@ interface AppContextType extends AppState {
   markNotificationRead: (id: string) => void;
   showPaymentSuccess: boolean;
   setShowPaymentSuccess: (v: boolean) => void;
+  fetchConfig: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -219,6 +221,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     submittingTask: false,
     postingTask: false,
     payingTaskId: null,
+    commissionPct: 15,
   });
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
 
@@ -248,6 +251,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({ ...s, tasksLoading: false, tasksError: connectionErrorMessage() }));
     }
   }, []);
+
+  const fetchConfig = useCallback(async () => {
+    try {
+      const response = await fetch(apiPath('/api/config'));
+      const raw = await response.json().catch(() => ({}));
+      const data = unwrapApiData<{ commissionPct: number }>(raw);
+      if (data && data.commissionPct) {
+        setState((s) => ({ ...s, commissionPct: data.commissionPct }));
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    void fetchConfig();
+  }, [fetchConfig]);
 
   const refreshCurrentUser = useCallback(async (userId: string) => {
     try {
@@ -671,7 +689,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             postedBy: seller.name,
             contactInfo: task.contactInfo ?? '',
             requiresContact: Boolean(task.requiresContact),
-            commissionRate: task.commissionRate,
+            commissionRate: state.commissionPct / 100, // Use global
           }),
         });
         const raw = await response.json().catch(() => ({}));
@@ -844,7 +862,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [fetchConfig]);
 
   return (
     <AppContext.Provider
@@ -863,6 +881,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         markNotificationRead,
         showPaymentSuccess,
         setShowPaymentSuccess,
+        fetchConfig,
       }}
     >
       {children}

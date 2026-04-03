@@ -38,6 +38,7 @@ export default function SellerDashboard() {
     payingTaskId,
     approveSubmission,
     rejectSubmission,
+    commissionPct,
   } = useApp();
   const [tab, setTab] = useState<'tasks' | 'post' | 'reviews' | 'analytics' | 'payments' | 'notifications'>('tasks');
 
@@ -53,19 +54,17 @@ export default function SellerDashboard() {
     difficulty: 'Easy' as const,
     contactInfo: '',
     requiresContact: false,
-    commissionPct: 15,
   });
   const [paymentTaskId, setPaymentTaskId] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { commissionPct, ...fields } = form;
     const created = await postTask({
-      ...fields,
+      ...form,
       timeEstimate: Number(form.timeEstimate),
       reward: Number(form.reward),
-      commissionRate: Math.min(20, Math.max(10, commissionPct)) / 100,
+      commissionRate: commissionPct / 100,
     });
     setForm({
       title: '',
@@ -76,7 +75,6 @@ export default function SellerDashboard() {
       difficulty: 'Easy',
       contactInfo: '',
       requiresContact: false,
-      commissionPct: 15,
     });
     if (created?.id) {
       setPaymentTaskId(created.id);
@@ -291,16 +289,13 @@ export default function SellerDashboard() {
                     </div>
                   </div>
                     <div className="space-y-2">
-                      <Label>Platform commission ({form.commissionPct}%)</Label>
-                      <Slider
-                        value={[form.commissionPct]}
-                        onValueChange={([v]) => setForm((f) => ({ ...f, commissionPct: v ?? 15 }))}
-                        min={10}
-                        max={20}
-                        step={1}
-                        className="py-2"
-                      />
-                      <p className="text-xs text-muted-foreground">Taken from the task reward when you approve the submission (10–20%).</p>
+                      <Label>Platform commission</Label>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="secondary" className="text-base rounded-md px-3 py-1 bg-secondary shadow-sm">
+                          {commissionPct}%
+                        </Badge>
+                        <p className="text-xs text-muted-foreground w-full">Taken from the task reward when you approve a submission.</p>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="contact">Contact info (optional)</Label>

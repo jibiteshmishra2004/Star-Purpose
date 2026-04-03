@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useApp } from '@/context/AppContext';
 import { NotificationsPopover } from '@/components/layout/NotificationsPopover';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -31,17 +32,30 @@ export default function Navbar() {
   return (
     <nav className="glass-nav fixed left-0 right-0 top-0 z-50">
       <div className="container mx-auto flex h-[4.25rem] items-center px-4">
-        <Link
-          to="/"
-          className="flex shrink-0 select-none items-center gap-3 transition-opacity hover:opacity-90"
-          title="Star Purpose — Home"
-        >
-          <img
-            src="/star-purpose-logo.png"
-            alt="Star Purpose"
-            className="h-9 w-auto max-h-11 max-w-[min(100%,200px)] object-contain object-left md:h-10"
-          />
-        </Link>
+        <div className="flex shrink-0 items-center gap-4">
+          {location.pathname !== '/' && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate(-1)}
+              className="hidden md:flex gap-1.5 h-8 px-2 text-muted-foreground border-border hover:bg-muted"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+              Back
+            </Button>
+          )}
+          <Link
+            to="/"
+            className="flex select-none items-center gap-3 transition-opacity hover:opacity-90"
+            title="Star Purpose — Home"
+          >
+            <img
+              src="/star-purpose-logo.png"
+              alt="Star Purpose"
+              className="h-10 w-auto max-h-12 max-w-[min(100%,220px)] object-contain object-left md:h-[2.75rem]"
+            />
+          </Link>
+        </div>
 
         <div className="hidden flex-1 items-center justify-end gap-1 md:flex">
           {!isLoggedIn ? (
@@ -128,6 +142,7 @@ export default function Navbar() {
               </Button>
             </>
           )}
+          <ThemeToggle />
         </div>
 
         <button
@@ -211,6 +226,9 @@ export default function Navbar() {
                   </button>
                 </>
               )}
+              <div className="flex justify-start py-2">
+                <ThemeToggle />
+              </div>
             </div>
           </motion.div>
         )}

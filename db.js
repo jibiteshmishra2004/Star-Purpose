@@ -8,13 +8,22 @@ const fs = require("fs");
 
 const DEFAULT_TASK_MINUTES = 60;
 
-/** Default platform commission (10–20%); override with PLATFORM_COMMISSION_PCT in .env (e.g. 0.12). */
+/** Default platform commission */
 function defaultCommissionRate() {
+  const row = db.prepare("SELECT value FROM platform_config WHERE key = 'PLATFORM_COMMISSION_PCT'").get();
+  if (row && row.value) {
+    const n = Number(row.value);
+    if (Number.isFinite(n)) return Math.min(0.2, Math.max(0.1, n));
+  }
   const raw = process.env.PLATFORM_COMMISSION_PCT;
   if (raw === undefined || raw === "") return 0.15;
   const n = Number(raw);
   if (!Number.isFinite(n)) return 0.15;
   return Math.min(0.2, Math.max(0.1, n));
+}
+
+function setPlatformConfig(key, value) {
+  db.prepare("INSERT INTO platform_config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(key, value);
 }
 
 const dbPath = process.env.SQLITE_PATH || path.join(__dirname, "data", "star-purpose.db");
@@ -40,6 +49,13 @@ db.exec(`
     rating REAL NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'flagged', 'suspended')),
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS platform_config (
+    key TEXT PRIMARY KEY,
+    value TEXT
   );
 `);
 
@@ -395,4 +411,5 @@ module.exports = {
   getAllUsers,
   verifyLogin,
   updateUserStatus,
+  setPlatformConfig,
 };

@@ -16,12 +16,14 @@ import SellerDashboard from "./pages/SellerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminSignin from "./pages/AdminSignin";
 import NotFound from "./pages/NotFound";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+  <ThemeProvider defaultTheme="system" storageKey="star-purpose-theme">
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
       <AppProvider>
         <GlobalBackground />
         <Toaster />
@@ -62,8 +64,9 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </AppProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;
