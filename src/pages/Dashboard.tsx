@@ -20,6 +20,7 @@ export default function Dashboard() {
     tenMinMode, toggleTenMinMode, tasks, activeTask, taskTimer,
     acceptTask, completeTask, balance, transactions, notifications,
     markNotificationRead, showPaymentSuccess, setShowPaymentSuccess, tasksLoading, tasksError,
+    acceptingTaskId, completingTask,
   } = useApp();
   const [tab, setTab] = useState<'tasks' | 'wallet' | 'history' | 'profile' | 'notifications'>('tasks');
   const [timer, setTimer] = useState(taskTimer);
@@ -114,8 +115,10 @@ export default function Dashboard() {
                         animate={{ width: `${Math.max(5, ((activeTask.timeEstimate * 60 - timer) / (activeTask.timeEstimate * 60)) * 100)}%` }}
                         transition={{ duration: 0.5 }} />
                     </div>
-                    <Button onClick={completeTask} className="w-full gradient-primary text-primary-foreground gap-2">
-                      <CheckCircle className="w-4 h-4" /> Mark as Complete
+                    <Button onClick={completeTask} disabled={completingTask} aria-busy={completingTask}
+                      className="w-full gradient-primary text-primary-foreground gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      {completingTask ? 'Completing…' : 'Mark as Complete'}
                     </Button>
                   </CardContent>
                 </Card>
@@ -159,9 +162,9 @@ export default function Dashboard() {
                           <Badge className={`text-xs ${difficultyColor[task.difficulty]}`}>{task.difficulty}</Badge>
                           <span className="text-xs text-muted-foreground ml-auto">{task.createdAt}</span>
                         </div>
-                        <Button onClick={() => acceptTask(task.id)} disabled={!!activeTask} size="sm"
+                        <Button onClick={() => acceptTask(task.id)} disabled={!!activeTask || acceptingTaskId === task.id} aria-busy={acceptingTaskId === task.id} size="sm"
                           className="w-full mt-3 gradient-primary text-primary-foreground gap-1">
-                          Accept Task <ArrowRight className="w-3 h-3" />
+                          {acceptingTaskId === task.id ? 'Accepting…' : 'Accept Task'} <ArrowRight className="w-3 h-3" />
                         </Button>
                       </CardContent>
                     </Card>

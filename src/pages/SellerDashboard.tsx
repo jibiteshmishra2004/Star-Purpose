@@ -19,7 +19,7 @@ const statusColor: Record<string, string> = {
 };
 
 export default function SellerDashboard() {
-  const { sellerTasks, postTask } = useApp();
+  const { sellerTasks, postTask, postingTask } = useApp();
   const [tab, setTab] = useState<'tasks' | 'post' | 'analytics' | 'payments'>('tasks');
   const [form, setForm] = useState({ title: '', description: '', timeEstimate: 10, reward: 5, category: 'Survey', difficulty: 'Easy' as const });
 
@@ -150,7 +150,9 @@ export default function SellerDashboard() {
                       </Select>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full gradient-primary text-primary-foreground">Post Task</Button>
+                  <Button type="submit" disabled={postingTask} aria-busy={postingTask} className="w-full gradient-primary text-primary-foreground">
+                    {postingTask ? 'Posting…' : 'Post Task'}
+                  </Button>
                 </form>
               </CardContent>
             </Card>

@@ -41,6 +41,16 @@ function errorResponse(res, message, status = 400) {
   return res.status(status).json({ success: false, error: message });
 }
 
+function parseTaskId(value) {
+  const n = typeof value === "string" ? parseInt(value, 10) : Number(value);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function normalizeAssignedTo(value) {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  return "user1";
+}
+
 app.get("/api/tasks", (req, res) => {
   return successResponse(res, taskDb.getAllTasks());
 });
@@ -66,6 +76,54 @@ app.post("/api/tasks", (req, res) => {
     return successResponse(res, newTask, 201);
   } catch (error) {
     return errorResponse(res, "Unable to create task.", 500);
+  }
+});
+
+app.post("/api/tasks/:id/accept", (req, res) => {
+  try {
+    const taskId = parseTaskId(req.params.id);
+    const assignedTo = normalizeAssignedTo(req.body?.assignedTo);
+
+    if (Number.isNaN(taskId)) {
+      return errorResponse(res, "Invalid task id.", 400);
+    }
+
+    const result = taskDb.acceptTask(taskId, assignedTo);
+    if (!result.ok) {
+      if (result.reason === "not_found") {
+        return errorResponse(res, "Task not found.", 404);
+      }
+      return errorResponse(
+        res,
+        "Only tasks with status OPEN can be accepted.",
+        400,
+      );
+    }
+
+    io.emit("task:accepted", result.task);
+    return successResponse(res, result.task);
+  } catch (error) {
+    return errorResponse(res, "Unable to accept task.", 500);
+  }
+});
+
+app.post("/api/tasks/:id/complete", (req, res) => {
+  try {
+    const taskId = parseTaskId(req.params.id);
+
+    if (Number.isNaN(taskId)) {
+      return errorResponse(res, "Invalid task id.", 400);
+    }
+
+    const result = taskDb.completeTask(taskId);
+    if (!result.ok) {
+      return errorResponse(res, "Task not found.", 404);
+    }
+
+    io.emit("task:completed", result.task);
+    return successResponse(res, result.task);
+  } catch (error) {
+    return errorResponse(res, "Unable to complete task.", 500);
   }
 });
 
@@ -170,12 +228,12 @@ app.post("/task/:id/complete", (req, res) => {
 });
 
 app.use((req, res) => {
-  return res.status(404).json({ error: "Route not found." });
+  return errorResponse(res, "Route not found.", 404);
 });
 
 app.use((err, req, res, next) => {
   console.error(err);
-  return res.status(500).json({ error: "Internal server error." });
+  return errorResponse(res, "Internal server error.", 500);
 });
 
 io.on("connection", (socket) => {
@@ -188,7 +246,7 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 5000;
 
 server
   .listen(PORT, () => {

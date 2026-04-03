@@ -21,13 +21,13 @@ export default defineConfig(async ({ mode }) => {
       // Same-origin API during dev → avoids CORS when the UI is opened as localhost OR 127.0.0.1
       proxy: {
         "/socket.io": {
-          target: "http://localhost:3000",
+          target: "http://localhost:5000",
           ws: true,
           changeOrigin: true,
         },
-        "/tasks": { target: "http://localhost:3000", changeOrigin: true },
-        "/task": { target: "http://localhost:3000", changeOrigin: true },
-        "/api": { target: "http://localhost:3000", changeOrigin: true },
+        "/tasks": { target: "http://localhost:5000", changeOrigin: true },
+        "/task": { target: "http://localhost:5000", changeOrigin: true },
+        "/api": { target: "http://localhost:5000", changeOrigin: true },
       },
     },
     plugins,

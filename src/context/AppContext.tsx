@@ -16,6 +16,9 @@ interface AppState {
   sellerTasks: Task[];
   tasksLoading: boolean;
   tasksError: string | null;
+  acceptingTaskId: string | null;
+  completingTask: boolean;
+  postingTask: boolean;
 }
 
 interface AppContextType extends AppState {
@@ -42,7 +45,7 @@ const API_BASE_URL = (() => {
   if (import.meta.env.DEV) {
     return '';
   }
-  return 'http://localhost:3000';
+  return 'http://localhost:5000';
 })();
 
 function apiPath(path: string) {
@@ -53,7 +56,7 @@ function apiPath(path: string) {
 function connectionErrorMessage(): string {
   return API_BASE_URL
     ? `Cannot reach the API at ${API_BASE_URL}. Is the backend running?`
-    : 'Cannot reach the API (proxied to port 3000). Run `npm run server` in another terminal, then refresh.';
+    : 'Cannot reach the API (proxied to port 5000). Run `npm run server` in another terminal, then refresh.';
 }
 
 type ApiTask = {
@@ -126,6 +129,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     sellerTasks: mockTasks.slice(0, 3).map(t => ({ ...t, postedBy: 'You', status: 'in-progress' as const })),
     tasksLoading: false,
     tasksError: null,
+    acceptingTaskId: null,
+    completingTask: false,
+    postingTask: false,
   });
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
 
@@ -152,7 +158,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const acceptTask = useCallback(async (taskId: string) => {
     try {
-      const response = await fetch(apiPath(`/task/${taskId}/accept`), {
+      setState(s => ({ ...s, acceptingTaskId: taskId, tasksError: null }));
+      const response = await fetch(apiPath(`/api/tasks/${taskId}/accept`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -162,6 +169,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) {
         const errorMessage = (raw as ApiEnvelope<ApiTask>).error || 'Unable to accept task.';
         toast.error(errorMessage);
+        setState(s => ({ ...s, acceptingTaskId: null }));
         return;
       }
 
@@ -175,12 +183,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           activeTask: mergedTask,
           tasks: upsertTaskById(s.tasks, mergedTask),
           taskTimer: mergedTask.timeEstimate * 60,
+          acceptingTaskId: null,
         };
       });
 
       toast.success(`Task accepted: ${acceptedTask.title}`);
     } catch (error) {
       toast.error(connectionErrorMessage());
+      setState(s => ({ ...s, acceptingTaskId: null, tasksError: connectionErrorMessage() }));
     }
   }, []);
 
@@ -188,7 +198,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!state.activeTask) return;
 
     try {
-      const response = await fetch(apiPath(`/task/${state.activeTask.id}/complete`), {
+      setState(s => ({ ...s, completingTask: true, tasksError: null }));
+      const response = await fetch(apiPath(`/api/tasks/${state.activeTask.id}/complete`), {
         method: 'POST',
       });
       const raw = await response.json().catch(() => ({}));
@@ -197,6 +208,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) {
         const errorMessage = (raw as ApiEnvelope<ApiTask>).error || 'Unable to complete task.';
         toast.error(errorMessage);
+        setState(s => ({ ...s, completingTask: false }));
         return;
       }
 
@@ -231,17 +243,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             },
             ...s.notifications,
           ],
+          completingTask: false,
         };
       });
       setShowPaymentSuccess(true);
     } catch (error) {
       toast.error(connectionErrorMessage());
+      setState(s => ({ ...s, completingTask: false, tasksError: connectionErrorMessage() }));
     }
   }, [state.activeTask]);
 
   const postTask = useCallback(async (task: Omit<Task, 'id' | 'status' | 'createdAt' | 'postedBy'>) => {
     try {
-      const response = await fetch(apiPath('/task'), {
+      setState(s => ({ ...s, postingTask: true, tasksError: null }));
+      const response = await fetch(apiPath('/api/tasks'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: task.title, price: task.reward }),
@@ -252,6 +267,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) {
         const errorMessage = (raw as ApiEnvelope<ApiTask>).error || 'Unable to post task.';
         toast.error(errorMessage);
+        setState(s => ({ ...s, postingTask: false }));
         return;
       }
 
@@ -268,10 +284,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...s,
         sellerTasks: upsertTaskById(s.sellerTasks, createdTask),
         tasks: upsertTaskById(s.tasks, createdTask),
+        postingTask: false,
       }));
       toast.success('Task posted successfully!');
     } catch (error) {
       toast.error(connectionErrorMessage());
+      setState(s => ({ ...s, postingTask: false, tasksError: connectionErrorMessage() }));
     }
   }, []);
 
@@ -286,7 +304,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const fetchTasks = async () => {
       setState(s => ({ ...s, tasksLoading: true, tasksError: null }));
       try {
-        const response = await fetch(apiPath('/tasks'));
+        const response = await fetch(apiPath('/api/tasks'));
         const raw = await response.json().catch(() => ([]));
         const data = unwrapApiData<ApiTask[]>(raw);
 
