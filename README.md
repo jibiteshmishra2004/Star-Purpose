@@ -1,6 +1,10 @@
 # STAR PURPOSE
 **Quick Tasks, Instant Earnings**
 
+<div align="center">
+  <img src="./public/screenshot.png" alt="STAR PURPOSE Project Screenshot" width="100%" />
+</div>
+
 Welcome to **STAR PURPOSE**, a modern, minimal SaaS marketplace designed to turn idle minutes into instant money. Our platform seamlessly connects "Sellers" who need quick tasks done with "Users" who are ready to complete them for instant rewards.
 
 ---
@@ -94,23 +98,26 @@ Once both are running, open your web browser and navigate to the local URL provi
 
 ## Project Structure
 
-Here's a quick map of where everything lives:
-
-- `/src` — Contains all the Frontend React code (Pages, Components, Context, Layouts).
-- `/server.js` — The entry point for our Node.js Express backend and Socket.io setup.
-- `/db.js` — Database configuration, tables, and schema setup using Better-SQLite3.
-- `/public` — Static assets like our crisp SVG logos and favicons.
-- `/.lovable` — Planning, design system notes, and documentation files.
-- `/data` — Where the SQLite database file (`marketplace.db`) is stored locally.
-
----
-
-## Design Philosophy
-
-STAR PURPOSE uses a clean, minimal SaaS aesthetic. 
-- **Colors:** Deep Indigo (`#4F46E5`) and vibrant Purple (`#7C3AED`) gradients over light gray and white backgrounds.
-- **Typography:** The `Inter` font family (or system default sans-serif) for maximum readability and a premium feel.
-- **Animations:** Subtle, deliberate animations ensure the UI feels alive and responsive without being overwhelming.
+```text
+Star-Purpose/
+├── .lovable/             # Planning and design notes
+├── data/                 # SQLite database storage (marketplace.db)
+├── public/               # Static assets (logos, screenshots)
+├── src/                  # React Frontend Code
+│   ├── components/       # Reusable UI components
+│   ├── context/          # React Context providers
+│   ├── data/             # Mock data
+│   ├── hooks/            # Custom React hooks
+│   ├── layout/           # Shared page layouts
+│   ├── pages/            # Main application views/pages
+│   └── utils/            # Helper functions
+├── .env.example          # Example environment variables
+├── db.js                 # Better-SQLite3 configuration and schema
+├── package.json          # Project dependencies and scripts
+├── server.js             # Node.js Express backend & Socket.io
+├── tailwind.config.ts    # Tailwind CSS configuration
+└── vite.config.ts        # Vite configuration
+```
 
 ---
 
