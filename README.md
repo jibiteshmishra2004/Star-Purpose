@@ -2,7 +2,7 @@
 **Quick Tasks, Instant Earnings**
 
 <div align="center">
-  <img src="./public/screenshot.png" alt="STAR PURPOSE Project Screenshot" width="100%" />
+  <img src="./public/banner.png" alt="STAR PURPOSE Project Banner" width="100%" />
 </div>
 
 Welcome to **STAR PURPOSE**, a modern, minimal SaaS marketplace designed to turn idle minutes into instant money. Our platform seamlessly connects "Sellers" who need quick tasks done with "Users" who are ready to complete them for instant rewards.
